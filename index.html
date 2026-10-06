@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Latihan Berhitung Cepat & Timer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 680px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .timer-box {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .question-box {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .btn-option {
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 14px 20px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        .btn-option:hover {
+            background-color: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        .btn-option.correct {
+            background-color: #10b981 !important;
+            color: white;
+            border-color: #10b981 !important;
+        }
+        .btn-option.wrong {
+            background-color: #ef4444 !important;
+            color: white;
+            border-color: #ef4444 !important;
+        }
+        .opt-label {
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .explanation-box {
+            display: none;
+            margin-top: 20px;
+            padding: 18px 20px;
+            background-color: #f0fdf4;
+            border-left: 5px solid #10b981;
+            border-radius: 6px;
+            color: #166534;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .explanation-box.wrong-bg {
+            background-color: #fef2f2;
+            border-left-color: #ef4444;
+            color: #991b1b;
+        }
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .btn-next {
+            background-color: #0d9488;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .btn-next:hover {
+            background-color: #0f766e;
+        }
+        .trick-title {
+            font-weight: bold;
+            color: #0d9488;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .explanation-box.wrong-bg .trick-title {
+            color: #b91c1c;
+        }
+        .time-used {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="stats">
+        <span>Skor: <span id="score">0</span></span>
+        <div class="timer-box">
+            ⏱️ Waktu: <span id="timer">00:00</span>
+        </div>
+        <span>Soal ke: <span id="q-count">1</span></span>
+    </div>
+
+    <div class="question-box" id="question">
+        Memuat soal...
+    </div>
+
+    <div class="options" id="options-container">
+        <!-- Pilihan jawaban diisi oleh JS -->
+    </div>
+
+    <div class="explanation-box" id="explanation">
+        <!-- Penjelasan Trik Cepat diisi oleh JS -->
+    </div>
+
+    <div class="controls">
+        <button class="btn-next" onclick="generateQuestion()">Soal Berikutnya</button>
+    </div>
+</div>
+
+<script>
+    let score = 0;
+    let questionCount = 0;
+    let answered = false;
+
+    let currentCorrectAnswer = "";
+    let currentExplanation = "";
+
+    // Variabel Timer
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let totalTimeElapsed = 0;
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function formatTime(sec) {
+        const mins = Math.floor(sec / 60);
+        const secs = sec % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        secondsElapsed = 0;
+        document.getElementById('timer').innerText = "00:00";
+
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            document.getElementById('timer').innerText = formatTime(secondsElapsed);
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    function generateQuestion() {
+        answered = false;
+        questionCount++;
+        document.getElementById('q-count').innerText = questionCount;
+        
+        const expBox = document.getElementById('explanation');
+        expBox.style.display = 'none';
+        expBox.className = 'explanation-box';
+
+        startTimer();
+
+        const isMultiplication = Math.random() < 0.5;
+        let targetValue = 0;
+        let correctPairA = "", correctPairB = "";
+
+        if (isMultiplication) {
+            const type = getRandomInt(1, 2);
+
+            if (type === 1) {
+                const a = getRandomInt(14, 35);
+                const b = getRandomInt(12, 40) * 10;
+                targetValue = a * b;
+                correctPairA = `${a} × ${b}`;
+                correctPairB = `${b / 10} × ${a * 10}`;
+
+                document.getElementById('question').innerText = 
+                    "Kombinasi perkalian yang menghasilkan total/nilai yang sama adalah...";
+
+                currentExplanation = `
+                    <span class="trick-title">💡 PEMBAHASAN & TRIK CEPAT:</span>
+                    <b>Trik Sifat Komutatif & Pindah Nol:</b><br>
+                    • Ruas Kiri: <b>${correctPairA}</b> = (${a} × ${b/10}) × 10<br>
+                    • Ruas Kanan: <b>${correctPairB}</b> = (${b/10} × ${a}) × 10<br>
+                    Tanpa perlu menghitung $(<b>${targetValue.toLocaleString('id-ID')}</b>)$, angka pembentuknya sama persis!
+                `;
+            } else {
+                const factor7 = getRandomInt(2, 5) * 7;
+                const base = getRandomInt(10, 30);
+                targetValue = factor7 * base * 5;
+
+                correctPairA = `${factor7} × ${base * 5}`;
+                correctPairB = `${factor7 / 7 * 5} × ${base * 7}`;
+
+                document.getElementById('question').innerText = 
+                    "Pasangan operasi yang menghasilkan nilai yang sama adalah...";
+
+                currentExplanation = `
+                    <span class="trick-title">💡 PEMBAHASAN & TRIK CEPAT:</span>
+                    <b>1. Trik Cek Faktor 7:</b><br>
+                    • Ruas Kiri punya angka <b>${factor7}</b> (kelipatan 7). Ruas Kanan wajib punya kelipatan 7 yaitu <b>${base * 7}</b>.<br>
+                    <b>2. Trik Tukar Pasangan (Split):</b><br>
+                    • Pembuktian Eksak: ${correctPairA} = ${correctPairB} = <b>${targetValue.toLocaleString('id-ID')}</b>.
+                `;
+            }
+        } else {
+            const ratio = getRandomInt(25, 45);
+            const div1 = getRandomInt(15, 35);
+            const num1 = ratio * div1;
+
+            let div2 = getRandomInt(15, 35);
+            while (div2 === div1) {
+                div2 = getRandomInt(15, 35);
+            }
+            const num2 = ratio * div2;
+
+            correctPairA = `${num1.toLocaleString('id-ID')} ÷ ${div1}`;
+            correctPairB = `${num2.toLocaleString('id-ID')} ÷ ${div2}`;
+
+            document.getElementById('question').innerText = 
+                "Kombinasi pembagian yang menghasilkan nilai yang sama adalah...";
+
+            currentExplanation = `
+                <span class="trick-title">💡 PEMBAHASAN & TRIK CEPAT:</span>
+                <b>Trik Penyederhanaan Rasio / Coret Pecahan:</b><br>
+                • Ruas Kiri: ${num1.toLocaleString('id-ID')} ÷ ${div1} = <b>${ratio}</b><br>
+                • Ruas Kanan: ${num2.toLocaleString('id-ID')} ÷ ${div2} = <b>${ratio}</b><br>
+                Cukup sederhanakan kedua bentuk pembagian ke bentuk paling kecil (FPB) tanpa perlu menghitung pembagian panjang.
+            `;
+        }
+
+        currentCorrectAnswer = `${correctPairA} sama dengan ${correctPairB}`;
+
+        let options = [currentCorrectAnswer];
+        while (options.length < 5) {
+            let wrongStr = "";
+            if (isMultiplication) {
+                let w1 = getRandomInt(14, 35);
+                let w2 = getRandomInt(12, 40) * 10;
+                let w3 = getRandomInt(14, 35);
+                let w4 = getRandomInt(12, 40) * 10;
+                if ((w1 * w2) !== (w3 * w4)) {
+                    wrongStr = `${w1} × ${w2} sama dengan ${w3} × ${w4}`;
+                }
+            } else {
+                let d1 = getRandomInt(15, 35);
+                let n1 = getRandomInt(20, 50) * d1;
+                let d2 = getRandomInt(15, 35);
+                let n2 = getRandomInt(20, 50) * d2;
+                if ((n1 / d1) !== (n2 / d2)) {
+                    wrongStr = `${n1.toLocaleString('id-ID')} ÷ ${d1} sama dengan ${n2.toLocaleString('id-ID')} ÷ ${d2}`;
+                }
+            }
+            if (wrongStr && !options.includes(wrongStr)) {
+                options.push(wrongStr);
+            }
+        }
+
+        options.sort(() => Math.random() - 0.5);
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = "";
+        const labels = ['A', 'B', 'C', 'D', 'E'];
+
+        options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-option';
+            btn.dataset.value = opt;
+            btn.innerHTML = `<span class="opt-label">${labels[index]}</span> ${opt}`;
+            btn.onclick = () => checkAnswer(btn, opt === currentCorrectAnswer);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedBtn, isCorrect) {
+        if (answered) return;
+        answered = true;
+        stopTimer();
+
+        totalTimeElapsed += secondsElapsed;
+        const avgTime = Math.round(totalTimeElapsed / questionCount);
+
+        const allButtons = document.querySelectorAll('.btn-option');
+        const expBox = document.getElementById('explanation');
+
+        if (isCorrect) {
+            selectedBtn.classList.add('correct');
+            score += 10;
+            document.getElementById('score').innerText = score;
+            expBox.classList.remove('wrong-bg');
+        } else {
+            selectedBtn.classList.add('wrong');
+            expBox.classList.add('wrong-bg');
+            
+            allButtons.forEach(btn => {
+                if (btn.dataset.value === currentCorrectAnswer) {
+                    btn.classList.add('correct');
+                }
+            });
+        }
+
+        const timeInfo = `<div class="time-used">⏱️ Waktu pengerjaan soal ini: <b>${secondsElapsed} detik</b> (Rata-rata: <b>${avgTime} detik/soal</b>)</div>`;
+        expBox.innerHTML = timeInfo + currentExplanation;
+        expBox.style.display = 'block';
+    }
+
+    generateQuestion();
+</script>
+
+</body>
+</html>
